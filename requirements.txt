@@ -6,4 +6,6 @@ geopy
 requests
 supabase
 bcrypt
+qrcode
 # Database and Security packages
+
