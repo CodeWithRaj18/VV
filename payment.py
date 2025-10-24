@@ -1,8 +1,8 @@
 import streamlit as st
-from io import BytesIO
 from pathlib import Path
 
 def payment_option():
+    # --- CSS Styling ---
     st.markdown(
         """
         <style>
@@ -50,6 +50,7 @@ def payment_option():
     payee_upi_id = "raj5530000@okicici"  # Your UPI ID
     payee_name = "EV Charging Corp"
 
+    # --- Booking Summary ---
     with st.container(border=True):
         st.subheader("Booking Summary")
         st.markdown(f"**Date:** {params['date']}")
@@ -65,6 +66,7 @@ def payment_option():
         options=["UPI", "Cash"]
     )
 
+    # --- UPI Payment ---
     if payment_method == "UPI":
         st.subheader("Pay via UPI")
         st.write("Scan this QR Code in your UPI app:")
@@ -76,23 +78,24 @@ def payment_option():
 
         st.image(str(qr_path), caption="Scan to Pay", use_container_width=False)
         st.markdown(f"**UPI ID:** `{payee_upi_id}`")
-
         st.warning("After completing the payment in your UPI app, please click the button below.")
 
         if st.button("I have completed the UPI payment"):
             st.session_state['payment_done'] = True
             st.success("UPI payment confirmed! You can now proceed.")
 
-    else:  # Cash selected
+    # --- Cash Payment ---
+    else:
         st.subheader("Pay by Cash")
         st.info(f"Please pay ₹{params['price']} at the station before charging begins.")
+
         if st.button("I will pay by cash at station"):
             st.session_state['payment_done'] = True
             st.success("Cash payment selected! You can now proceed.")
 
     st.divider()
 
-    # --- Only allow proceeding if payment_done ---
+    # --- Proceed to Confirmation ONLY if Payment Done ---
     if st.session_state.get('payment_done', False):
         if st.button("Proceed to Confirmation"):
             st.session_state['page'] = 'confirmation'
