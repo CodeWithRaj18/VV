@@ -5,4 +5,5 @@ streamlit-js-eval
 geopy
 requests
 supabase
+bcrypt
 # Database and Security packages
