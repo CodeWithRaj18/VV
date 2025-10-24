@@ -45,8 +45,6 @@ def payment_option():
         return
 
     params = st.session_state['payment_params']
-
-    # --- Payment Details ---
     payee_upi_id = "raj5530000@okicici"  # Your UPI ID
     payee_name = "EV Charging Corp"
 
@@ -78,9 +76,9 @@ def payment_option():
 
         st.image(str(qr_path), caption="Scan to Pay", use_container_width=False)
         st.markdown(f"**UPI ID:** `{payee_upi_id}`")
-        st.warning("After completing the payment in your UPI app, please click the button below.")
+        st.warning("After completing the payment in your UPI app, tick the checkbox below to confirm.")
 
-        if st.button("I have completed the UPI payment"):
+        if st.checkbox("I confirm that I have completed the UPI payment"):
             st.session_state['payment_done'] = True
             st.success("UPI payment confirmed! You can now proceed.")
 
@@ -88,8 +86,7 @@ def payment_option():
     else:
         st.subheader("Pay by Cash")
         st.info(f"Please pay ₹{params['price']} at the station before charging begins.")
-
-        if st.button("I will pay by cash at station"):
+        if st.checkbox("I will pay by cash at station"):
             st.session_state['payment_done'] = True
             st.success("Cash payment selected! You can now proceed.")
 
