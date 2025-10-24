@@ -5,7 +5,7 @@ streamlit-js-eval
 geopy
 requests
 
-Database and Security
+
 
 supabase-py
 bcrypt
@@ -14,3 +14,4 @@ Utility
 
 qrcode
 Pillow
+
