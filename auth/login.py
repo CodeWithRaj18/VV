@@ -1,42 +1,44 @@
 import streamlit as st
-import hashlib
-from pathlib import Path
-# Import database functions and connection creation for SQLite
-from database import get_user, create_connection 
+import bcrypt
+# Import necessary functions from your database module
+from database import get_user 
 
-# Function to hash the password (MUST match the one used for registration)
 def hash_password(password):
-    """Hash the password using SHA256."""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Placeholder function (actual hashing is handled by bcrypt.checkpw)."""
+    return password.encode('utf-8') 
 
 def login_user(email, password):
     
-    conn = create_connection()
-    if not conn:
-        return False, "Database connection failed."
+    # 1. Database Lookup (using Supabase)
+    user_data = get_user(email)
 
-    # 1. Fetch user data from the SQLite database
-    user_data = get_user(conn, email)
-    conn.close()
-    
-    if user_data:
-        # 2. Hash the user-entered password
-        input_hashed_password = hash_password(password)
+    # Check if the user was found and data is valid
+    if user_data and user_data.get('password_hash'):
         
-        # 3. Compare the generated hash with the stored hash
-        if user_data["password_hash"] == input_hashed_password:
-            # Authentication successful!
-            st.session_state.logged_in = True
-            st.session_state.email = email
-            
-            # Store user data (including vehicles) in session state for home.py
-            st.session_state.users = {email: user_data} 
-            
-            return True, "Login successful!"
-        else:
-            return False, "Invalid email or password."
-    
-    return False, "Invalid email or password."
+        # 2. Password Verification (using bcrypt)
+        # Stored hash must be bytes, so we encode the stored string hash
+        stored_hash = user_data["password_hash"].encode('utf-8')
+        password_bytes = password.encode('utf-8')
+
+        try:
+            # Check the password against the stored hash
+            if bcrypt.checkpw(password_bytes, stored_hash):
+                # Login successful
+                st.session_state['logged_in'] = True
+                st.session_state['email'] = email
+                
+                # Store user data for easy access on the home page
+                st.session_state['users'] = {email: user_data} 
+                
+                return True, "Login successful!"
+            else:
+                return False, "Invalid email or password."
+        except Exception:
+            # Catches errors during the bcrypt check (e.g., if the stored hash is invalid)
+            return False, "Login failed. Error during password verification."
+    else:
+        # Handles user not found or database error (error message handled in database.py)
+        return False, "Invalid email or password."
 
 
 def login_form():
@@ -164,19 +166,17 @@ def login_form():
 
     st.subheader("Login")
     
-    # Using st.form for better input management and button callback
     with st.form("login_form"):
-        email = st.text_input("Email", key="login_email_form") # Unique key for form input
-        password = st.text_input("Password", type="password", key="login_password_form") # Unique key for form input
+        email = st.text_input("Email", key="login_email_form")
+        password = st.text_input("Password", type="password", key="login_password_form")
         
-        # Every form must have a submit button
         submitted = st.form_submit_button("Login", use_container_width=True)
 
         if submitted:
             success, msg = login_user(email, password)
             
             if success:
-                st.success(msg) # Streamlit's default success looks good with this theme
+                st.success(msg)
                 st.rerun()
             else:
-                st.error(msg) # Streamlit's default error looks good with this theme
+                st.error(msg)

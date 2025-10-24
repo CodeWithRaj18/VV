@@ -1,9 +1,8 @@
 import streamlit as st
-import qrcode
 from io import BytesIO
+from pathlib import Path
 
 def payment_option():
-   
     st.markdown(
         """
         <style>
@@ -38,8 +37,7 @@ def payment_option():
         unsafe_allow_html=True
     )
 
-    # --- Title ---
-    st.title("Complete Your Payment via UPI")
+    st.title("Complete Your Payment")
 
     # --- Session Check ---
     if 'payment_params' not in st.session_state:
@@ -49,7 +47,7 @@ def payment_option():
     params = st.session_state['payment_params']
 
     # --- Payment Details ---
-    payee_upi_id = "your upi id"
+    payee_upi_id = "raj5530000@okicici"  # Your UPI ID
     payee_name = "EV Charging Corp"
 
     with st.container(border=True):
@@ -61,30 +59,43 @@ def payment_option():
 
     st.divider()
 
-    # --- UPI QR Code Generation ---
-    transaction_notes = f"Payment for slot {params['time_slot']}"
-    upi_payment_link = (
-        f"upi://pay?pa={payee_upi_id}&pn={payee_name}"
-        f"&am={params['price']}&cu=INR&tn={transaction_notes}"
+    # --- Payment Method Selection ---
+    payment_method = st.radio(
+        "Choose Payment Method:",
+        options=["UPI", "Cash"]
     )
 
-    st.subheader("Payment Method")
-    st.write("Scan the QR Code below with your UPI App:")
+    if payment_method == "UPI":
+        st.subheader("Pay via UPI")
+        st.write("Scan this QR Code in your UPI app:")
 
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(upi_payment_link)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    buf = BytesIO()
-    img.save(buf)
+        qr_path = Path(__file__).parent / "my_upi_qr.jpg"
+        if not qr_path.exists():
+            st.error("QR code image not found!")
+            return
 
-    st.image(buf)
+        st.image(str(qr_path), caption="Scan to Pay", use_container_width=False)
+        st.markdown(f"**UPI ID:** `{payee_upi_id}`")
+
+        st.warning("After completing the payment in your UPI app, please click the button below.")
+
+        if st.button("I have completed the UPI payment"):
+            st.session_state['payment_done'] = True
+            st.success("UPI payment confirmed! You can now proceed.")
+
+    else:  # Cash selected
+        st.subheader("Pay by Cash")
+        st.info(f"Please pay ₹{params['price']} at the station before charging begins.")
+        if st.button("I will pay by cash at station"):
+            st.session_state['payment_done'] = True
+            st.success("Cash payment selected! You can now proceed.")
 
     st.divider()
 
-    # --- Payment Confirmation ---
-    st.warning("After completing the payment in your UPI app, please click the button below.")
-
-    if st.button("I have completed the payment", type="primary", use_container_width=True):
-        st.session_state['page'] = 'confirmation'
-        st.rerun()
+    # --- Only allow proceeding if payment_done ---
+    if st.session_state.get('payment_done', False):
+        if st.button("Proceed to Confirmation"):
+            st.session_state['page'] = 'confirmation'
+            st.rerun()
+    else:
+        st.info("Complete your payment first to proceed.")

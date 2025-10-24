@@ -6,7 +6,8 @@ from home import home_page
 from slot_book import slot_book
 from payment import payment_option
 from confirmation_page import confirmation_page
-import db_init
+
+
 def main():
     hide_st_style = """
             <style>

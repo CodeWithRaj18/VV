@@ -105,7 +105,7 @@ def confirmation_page():
             margin-bottom: 25px;
         }
         .logo-container img {
-            max-width: 160px;
+            max-width: 120px;
             border-radius: 50%;
             border: 2px solid rgb(27, 31, 27);
             box-shadow: 0 0 20px rgba(144, 238, 144, 0.6);

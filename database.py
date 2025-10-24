@@ -1,79 +1,105 @@
-import sqlite3
-import os
-import hashlib
+import streamlit as st
+from supabase import create_client, Client
+import bcrypt # Required for password verification logic
+import uuid # Required for generating unique booking IDs
+from datetime import datetime
 
-# Define the path to your database file
-DB_PATH = os.path.join("database", "users.db")
+# --- Supabase Initialization ---
+# Supabase credentials MUST be set in your .streamlit/secrets.toml file under the [supabase] section.
+try:
+    SUPABASE_URL = st.secrets["supabase"]["URL"]
+    SUPABASE_ANON_KEY = st.secrets["supabase"]["ANON_KEY"]
+except KeyError:
+    # This error handles cases where secrets are not set up correctly in Streamlit Cloud
+    st.error("❌ SUPABASE SETUP ERROR: Please ensure URL and ANON_KEY are correctly defined in Streamlit Secrets under the [supabase] header.")
+    st.stop()
 
-def create_connection():
-    """Create and return a database connection."""
-    conn = None
+# Initialize the Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+# --- Supabase Table Names ---
+USERS_TABLE = "users"
+BOOKINGS_TABLE = "bookings" 
+
+# ----------------------------
+# USER REGISTRATION AND LOGIN FUNCTIONS
+# ----------------------------
+
+def add_user(email, name, password_hash, vehicle_model):
+    """Adds a new user record to the Supabase 'users' table."""
     try:
+        # Check if user already exists
+        user_record = supabase.table(USERS_TABLE).select("email").eq("email", email).execute()
         
-        db_dir = os.path.dirname(DB_PATH)
-        if not os.path.exists(db_dir) and db_dir:
-        
-            os.makedirs(db_dir, exist_ok=True)
-            
-        conn = sqlite3.connect(DB_PATH)
-        return conn
-    except sqlite3.Error as e:
-        print(f"Error connecting to database: {e}")
-        return None
+        if len(user_record.data) > 0:
+            return False # User already exists
 
-def create_users_table(conn): 
-    """Create the users table if it does not exist."""
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                email TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                password_hash TEXT NOT NULL,
-                vehicles TEXT
-            );
-        """)
-        conn.commit()
-    except sqlite3.Error as e:
-        print(f"Error creating users table: {e}")
+        # Prepare data for insertion (keys must match Supabase table columns!)
+        data = {
+            "email": email,
+            "name": name,
+            "password_hash": password_hash,
+            "vehicles": vehicle_model # Storing vehicle model as a string
+        }
 
-def add_user(conn, email, name, password_hash, vehicles=""):
-    """Insert a new user into the database."""
-    try:
-        cursor = conn.cursor()
-      
-        cursor.execute(
-            "INSERT INTO users (email, name, password_hash, vehicles) VALUES (?, ?, ?, ?)",
-            (email, name, password_hash, vehicles)
-        )
-        conn.commit()
+        # Insert the new user record
+        supabase.table(USERS_TABLE).insert(data).execute()
         return True
-    except sqlite3.IntegrityError:
-        
-        return False
-    except sqlite3.Error as e:
-        print(f"Error adding user: {e}")
+
+    except Exception as e:
+        st.error(f"❌ Database Error during registration: {e}")
         return False
 
-def get_user(conn, email):
-    """Fetch user details by email."""
+
+def get_user(email):
+    """Retrieves a user's details from the Supabase 'users' table by email."""
     try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT email, name, password_hash, vehicles FROM users WHERE email = ?", (email,))
-        row = cursor.fetchone()
-        if row:
+        # Query the users table
+        response = supabase.table(USERS_TABLE).select("*").eq("email", email).execute()
+        
+        if response.data:
+            user_data = response.data[0]
+            # Convert the vehicles string back to a list (important for home.py)
+            vehicles_list = [user_data.get('vehicles', '').strip()] if user_data.get('vehicles') else []
             
+            # Return a dictionary compatible with the rest of the application
             return {
-                "email": row[0],
-                "name": row[1],
-                "password_hash": row[2],
-                # vehicles column contains a comma-separated string, convert back to a list
-                "vehicles": row[3].split(',') if row[3] else []
+                "name": user_data['name'],
+                "password_hash": user_data['password_hash'],
+                "vehicles": vehicles_list
             }
-        return None
-    except sqlite3.Error as e:       
-        print(f"Error fetching user: {e}")
+        else:
+            return None # User not found
+
+    except Exception as e:
+        # We catch the exception and return None, letting the calling function handle the error message
+        # st.error(f"❌ Database Error: Failed to retrieve user. Details: {e}")
         return None
 
-# NOTE: The automatic database initialization block has been removed from here
-# to prevent the circular import error.
+# ----------------------------
+# BOOKING FUNCTIONS
+# ----------------------------
+
+def add_booking(booking_details):
+    """Records a new successful booking into the Supabase 'bookings' table."""
+    try:
+        booking_id = f"EVB-{uuid.uuid4().hex[:8].upper()}"
+        
+        # Prepare data for insertion (keys must match Supabase table columns!)
+        data = {
+            "booking_id": booking_id,
+            "user_email": booking_details.get('user_email', 'N/A'),
+            "station_name": booking_details.get('station', 'N/A'),
+            "vehicle_model": booking_details.get('vehicle', 'N/A'),
+            "date_time": f"{booking_details['date']} {booking_details['time_slot'].split(' - ')[0]}", 
+            "cable_type": booking_details.get('cable_type', 'N/A'),
+            "cost": booking_details.get('price', 0),
+            "status": "Confirmed"
+        }
+        
+        supabase.table(BOOKINGS_TABLE).insert(data).execute()
+        return True, booking_id
+
+    except Exception as e:
+        st.error(f"❌ Database Error during booking: {e}")
+        return False, None
