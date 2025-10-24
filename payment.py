@@ -9,7 +9,7 @@ def payment_option():
         return
 
     params = st.session_state['payment_params']
-    payee_upi_id = "raj5530000@okicici"  # Your UPI ID
+    payee_upi_id = "raj5530000@okicici"
 
     st.subheader("Booking Summary")
     st.markdown(f"**Date:** {params['date']}")
@@ -20,35 +20,35 @@ def payment_option():
 
     payment_method = st.radio("Choose Payment Method:", ["UPI", "Cash"])
 
+    payment_done = False  # local flag
+
     if payment_method == "UPI":
         st.subheader("Pay via UPI")
         qr_path = Path(__file__).parent / "my_upi_qr.jpg"
         if qr_path.exists():
             st.image(str(qr_path), caption="Scan to Pay", use_container_width=False)
         st.markdown(f"**UPI ID:** `{payee_upi_id}`")
-        st.info("After completing the payment, upload the payment screenshot for verification:")
+        st.info("After completing the payment, upload the screenshot:")
 
         uploaded_file = st.file_uploader("Upload Screenshot (JPG/PNG)", type=["png", "jpg", "jpeg"])
-        
+
         if uploaded_file:
-            # Optional: simple filename check
-            if payee_upi_id.split("@")[0] in uploaded_file.name:
-                st.success("Screenshot uploaded & verified! You can now proceed.")
-                st.session_state['payment_done'] = True
-            else:
-                st.error("UPI ID in screenshot does not match! Payment cannot be verified.")
+            payment_done = True
+            st.success("Screenshot uploaded! You can now proceed.")
 
     else:  # Cash payment
         st.subheader("Pay by Cash")
         st.info(f"Please pay ₹{params['price']} at the station.")
         if st.checkbox("I will pay by cash at station"):
-            st.session_state['payment_done'] = True
+            payment_done = True
             st.success("Cash payment selected! You can now proceed.")
 
     st.divider()
 
-    if st.session_state.get('payment_done', False):
+    # --- Show Proceed button ONLY if payment_done ---
+    if payment_done:
         if st.button("Proceed to Confirmation"):
+            st.session_state['payment_done'] = True
             st.session_state['page'] = 'confirmation'
             st.rerun()
     else:
