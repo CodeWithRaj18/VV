@@ -4,13 +4,5 @@ streamlit-folium
 streamlit-js-eval
 geopy
 requests
-
-Database and Security (Corrected package name)
-
-supabase # Using 'supabase' instead of 'supabase-py' for better compatibility
-bcrypt
-
-Utility
-
-qrcode
-Pillow
+supabase
+# Database and Security packages
